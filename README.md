@@ -194,7 +194,6 @@ local function autoTrialLoop(trialType)
             local timer = findTrialTimer(trialType)
             if timer then
                 local txt = normalize(timer.Text)
-                local isZero = txt:find("0:00") or txt:find("00:00")
                 local isOpening = txt:find("opening !") or txt:find("opening!")
                 if (isZero or isOpening) and (tick() - lastTrialTrigger > 3) then
                     lastTrialTrigger = tick()
