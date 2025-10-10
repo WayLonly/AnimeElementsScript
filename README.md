@@ -80,15 +80,14 @@ local function autoFarmLoop()
     end
 end
 
--- =========================
--- Trial: Timer e Remote
--- =========================
-local function findTrialTimer()
+local function findTrialTimer(trialType)
     local portals = Workspace:FindFirstChild("__Portals") or Workspace:FindFirstChild("_Portals")
-    local easy = portals and (portals:FindFirstChild("easy") or portals:FindFirstChild("Easy"))
-    local hud = easy and (easy:FindFirstChild("Hud") or easy:FindFirstChild("HUD"))
+    local portal = portals and (portals:FindFirstChild(trialType) or portals:FindFirstChild(trialType:lower()))
+    local hud = portal and (portal:FindFirstChild("Hud") or portal:FindFirstChild("HUD"))
     local timer = hud and (hud:FindFirstChild("Timer") or hud:FindFirstChild("timer"))
     if timer and timer:IsA("TextLabel") then return timer end
+
+    -- fallback genérico
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj:IsA("TextLabel") then
             local t = normalize(obj.Text)
@@ -97,6 +96,7 @@ local function findTrialTimer()
     end
     return nil
 end
+
 
 local function fireEnterTrial()
     local ok, err = pcall(function()
@@ -220,7 +220,7 @@ local autoTrialMediumOn = false
 local function autoTrialLoop(trialType)
     task.spawn(function()
         while (trialType == "easy" and autoTrialEasyOn) or (trialType == "medium" and autoTrialMediumOn) do
-            local timer = findTrialTimer()
+            local timer = findTrialTimer(trialType)
             if timer then
                 local txt = normalize(timer.Text)
                 local isZero = txt:find("0:00") or txt:find("00:00")
@@ -242,7 +242,7 @@ local function autoTrialLoop(trialType)
                             -- Pausa Auto Farm por 10s e reativa
                             autoFarmOn = false
                             print("[AutoTrial] Auto Farm desativado por 10s.")
-                            task.delay(60, function()
+                            task.delay(10, function()
                                 autoFarmOn = true
                                 print("[AutoTrial] Auto Farm reativado.")
                                 task.spawn(autoFarmLoop)
@@ -282,6 +282,7 @@ local function autoTrialLoop(trialType)
         stopRoomWatcher()
     end)
 end
+
 
 -- =========================
 -- Loop da Function 25 (InvokeServer no índice ajustável)
