@@ -98,31 +98,6 @@ local function findTrialTimer(trialType)
 end
 
 
-local function fireEnterTrial()
-    local ok, err = pcall(function()
-        local args = { [1] = "easy" }
-        local comm = ReplicatedStorage:WaitForChild("Communication", 9e9)
-        local events = comm:WaitForChild("__events", 9e9)
-        local children = events:GetChildren()
-        local remote = children[6]
-        if not remote then error("Remote 404") end
-        if remote:IsA("RemoteEvent") then
-            remote:FireServer(unpack(args))
-        elseif remote:IsA("RemoteFunction") then
-            remote:InvokeServer(unpack(args))
-        else
-            error("error")
-        end
-    end)
-    if ok then
-        print("[AutoTrial] Trying join in Trial (ok)")
-        return true
-    else
-        warn("[AutoTrial] Falhou:", err)
-        return false
-    end
-end
-
 -- =========================
 -- === NOVO: Monitor RoomLabel e executar Function #4
 -- =========================
@@ -176,29 +151,25 @@ local function startRoomWatcher()
                 return label
             end)
 
-            if ok and roomLabel and roomLabel:IsA("TextLabel") then
-                local txt = roomLabel.Text
-                local currentNum = extractRoomNumberFromText(txt)
-                print(("[RoomWatcher] Room atual: %s (extraído: %s)"):format(txt, tostring(currentNum)))
+           if ok and roomLabel and roomLabel:IsA("TextLabel") then
+            local txt = roomLabel.Text
+            local currentNum = extractRoomNumberFromText(txt)
+            print(("[RoomWatcher] Room atual: %s (extraído: %s)"):format(txt, tostring(currentNum)))
 
-                if lastRoomNum ~= nil and currentNum ~= nil and currentNum == lastRoomNum then
-                    repeatCount += 1
-                    print("[RoomWatcher] Sala repetida. Contador:", repeatCount)
-                    if repeatCount >= 2 then
-                        print("[RoomWatcher] Sala travada. Executando Auto Exit.")
-                        JsFramework.Network:FireServer("Dungeon_RequestLeave")
-                        break
-                    end
-                else
-                    repeatCount = 0
-                end
-
-                if currentNum ~= nil then
-                    lastRoomNum = currentNum
-                end
-            else
-                warn("[RoomWatcher] Não encontrou RoomLabel no caminho esperado")
+            if lastRoomNum ~= nil and currentNum ~= nil and currentNum == lastRoomNum then
+                print("[RoomWatcher] Sala travada. Executando Auto Exit.")
+                JsFramework.Network:FireServer("Dungeon_RequestLeave")
+                roomWatcherRunning = false
+                return
             end
+
+            if currentNum ~= nil then
+                lastRoomNum = currentNum
+            end
+        else
+            warn("[RoomWatcher] Não encontrou RoomLabel no caminho esperado")
+end
+
 
             task.wait(20)
         end
