@@ -242,7 +242,7 @@ local function autoTrialLoop(trialType)
                             -- Pausa Auto Farm por 10s e reativa
                             autoFarmOn = false
                             print("[AutoTrial] Auto Farm desativado por 10s.")
-                            task.delay(10, function()
+                            task.delay(60, function()
                                 autoFarmOn = true
                                 print("[AutoTrial] Auto Farm reativado.")
                                 task.spawn(autoFarmLoop)
@@ -267,9 +267,9 @@ local function autoTrialLoop(trialType)
                                 end
                             end)
 
-                            task.delay(10, function()
+                            task.delay(50, function()
                                 trialEnteredOnce = false
-                                print("[AutoTrial] Resetado após 10s.")
+                                print("[AutoTrial] Resetado após 50s.")
                             end)
                         else
                             warn("[AutoTrial] Falha ao entrar na trial:", err)
