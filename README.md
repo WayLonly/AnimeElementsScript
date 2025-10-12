@@ -408,6 +408,7 @@ end
 local function stopAutoCall()
     currentRunId = nil
 end
+
 -- === Auto Spin Player Passives (Fluent Toggle) ===
 local autoPlayerPassiveSpinOn = false
 local autoPlayerPassiveThread
@@ -451,7 +452,6 @@ local function stopAutoPlayerPassiveSpin()
     autoPlayerPassiveSpinOn = false
     print("[AutoSpinPlayer] Parado")
 end
-
 -- =========================
 -- Fluent UI (com Settings)
 -- =========================
@@ -732,6 +732,22 @@ Tabs.Passives:AddButton({
             end
         end
     })
+    Tabs.Passives:AddToggle("AutoSpinPlayerPassives", {
+    Title = "Auto Spin Player Passives",
+    Description = "Liga/desliga auto-spin das passivas do Player",
+    Default = false,
+    Callback = function(state)
+        if state then
+            -- evita conflitos com outros auto-spins já existentes
+            if autoPlayerPassiveSpinOn then return end
+            startAutoPlayerPassiveSpin()
+            print("🟢 Auto Spin Player ON")
+        else
+            stopAutoPlayerPassiveSpin()
+            print("🔴 Auto Spin Player OFF")
+        end
+    end
+})
 
     -- NOVO: Dropdown + Botão Function 22 (nomes amigáveis → args duplos)
     local f22Options = {
@@ -761,22 +777,6 @@ Tabs.Passives:AddButton({
             print(string.format("[Func22] Selected: %s -> %s, %s", selectedF22Name, tostring(selectedF22Args[1]), tostring(selectedF22Args[2])))
         end
     })
-    Tabs.Passives:AddToggle("AutoSpinPlayerPassives", {
-    Title = "Auto Spin Player Passives",
-    Description = "Liga/desliga auto-spin das passivas do Player",
-    Default = false,
-    Callback = function(state)
-        if state then
-            -- evita conflitos com outros auto-spins já existentes
-            if autoPlayerPassiveSpinOn then return end
-            startAutoPlayerPassiveSpin()
-            print("🟢 Auto Spin Player ON")
-        else
-            stopAutoPlayerPassiveSpin()
-            print("🔴 Auto Spin Player OFF")
-        end
-    end
-})
 
     Tabs.Respiration:AddButton({
         Title = "Change Your Respiration",
