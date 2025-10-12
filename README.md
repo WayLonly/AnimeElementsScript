@@ -259,7 +259,7 @@ end
 -- =========================
 local function autoFunc25Loop()
     local funcs = ReplicatedStorage:WaitForChild("Communication"):WaitForChild("Functions")
-    local remote = funcs:GetChildren()[31]
+    local remote = funcs:GetChildren()[18]
     if not remote then
         warn("[Func31] Remote 404.")
         return
@@ -751,12 +751,14 @@ Tabs.Passives:AddButton({
 
     -- NOVO: Dropdown + Botão Function 22 (nomes amigáveis → args duplos)
     local f22Options = {
+        "Sun 10x Fire",
         "Love 5x Earth",
         "Mist 5x Watter",
         "Thunder 3x Wind",
         "Fire 2x Fire",
     }
     local f22ArgsMap = {
+        ["Sun 10x Fire"]   = { "W4_1", "ID_8" },
         ["Love 5x Earth"]   = { "W4_1", "ID_7" },
         ["Mist 5x Watter"]  = { "W4_1", "ID_6" },
         ["Thunder 3x Wind"] = { "W4_1", "ID_5" },
