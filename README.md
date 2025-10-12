@@ -408,6 +408,49 @@ end
 local function stopAutoCall()
     currentRunId = nil
 end
+-- === Auto Spin Player Passives (Fluent Toggle) ===
+local autoPlayerPassiveSpinOn = false
+local autoPlayerPassiveThread
+local PLAYER_SPIN_INTERVAL = 0.4 -- intervalo entre spins (mesmo padrão do script original)
+
+local function startAutoPlayerPassiveSpin()
+    if autoPlayerPassiveSpinOn then return end
+    autoPlayerPassiveSpinOn = true
+    autoPlayerPassiveThread = task.spawn(function()
+        while autoPlayerPassiveSpinOn do
+            local ok, res = pcall(function()
+                return JsFramework.Network:InvokeServer("roll_p_passive")
+            end)
+
+            if ok then
+                -- opcional: mostra notificação visual via JsFramework
+                JsFramework.Signal.Fire("CustomNotification", "Rolled passive", {
+                    BackColor = Color3.fromRGB(128, 255, 106),
+                    TextColor = Color3.fromRGB(255, 255, 255),
+                    Timer = 1
+                })
+                -- você pode logar o id retornado se quiser
+                -- print("[AutoSpinPlayer] Retorno:", tostring(res))
+            else
+                warn("[AutoSpinPlayer] Falha ao chamar roll_p_passive:", tostring(res))
+                JsFramework.Signal.Fire("CustomNotification", "Spin failed", {
+                    BackColor = Color3.fromRGB(255, 108, 108),
+                    TextColor = Color3.fromRGB(255, 255, 255),
+                    Timer = 2
+                })
+                -- em caso de falhas repetidas, pode-se pausar automaticamente (não implementado por padrão)
+            end
+
+            task.wait(PLAYER_SPIN_INTERVAL)
+        end
+    end)
+    print("[AutoSpinPlayer] Iniciado")
+end
+
+local function stopAutoPlayerPassiveSpin()
+    autoPlayerPassiveSpinOn = false
+    print("[AutoSpinPlayer] Parado")
+end
 
 -- =========================
 -- Fluent UI (com Settings)
@@ -718,6 +761,22 @@ Tabs.Passives:AddButton({
             print(string.format("[Func22] Selected: %s -> %s, %s", selectedF22Name, tostring(selectedF22Args[1]), tostring(selectedF22Args[2])))
         end
     })
+    Tabs.Passives:AddToggle("AutoSpinPlayerPassives", {
+    Title = "Auto Spin Player Passives",
+    Description = "Liga/desliga auto-spin das passivas do Player",
+    Default = false,
+    Callback = function(state)
+        if state then
+            -- evita conflitos com outros auto-spins já existentes
+            if autoPlayerPassiveSpinOn then return end
+            startAutoPlayerPassiveSpin()
+            print("🟢 Auto Spin Player ON")
+        else
+            stopAutoPlayerPassiveSpin()
+            print("🔴 Auto Spin Player OFF")
+        end
+    end
+})
 
     Tabs.Respiration:AddButton({
         Title = "Change Your Respiration",
