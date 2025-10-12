@@ -472,11 +472,11 @@ else
     })
 
     local Tabs = {
-        Main = Window:AddTab({ Title = "Main", Icon = "" }),
-        Avatar = Window:AddTab({ Title = "Avatar", Icon = "" }),
-        Passives = Window:AddTab({ Title = "Passives", Icon = "" }),
-        Gachas = Window:AddTab({ Title = "Gachas", Icon = "" }),
-        Respiration = Window:AddTab({ Title = "Respiration", Icon = "" }),
+        Main = Window:AddTab({ Title = "Main", Icon = "hammer" }),
+        Avatar = Window:AddTab({ Title = "Avatar", Icon = "users" }),
+        Passives = Window:AddTab({ Title = "Passives", Icon = "swords" }),
+        Gachas = Window:AddTab({ Title = "Gachas", Icon = "aperture" }),
+        Respiration = Window:AddTab({ Title = "Respiration", Icon = "wind" }),
         Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
     }
 
