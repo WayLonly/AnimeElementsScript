@@ -41,7 +41,7 @@ end
 -- Auto Farm NPCs
 -- =========================
 local npcRoot = Workspace:WaitForChild("__debris"):WaitForChild("__npcs"):WaitForChild("__client")
-local idFolders = {"ID_1","ID_2","ID_3","ID_4"}
+local idFolders = {"ID_1","ID_2","ID_3","ID_4","ID_5"}
 local approachOffset = Vector3.new(0, 3, 3)
 local delayBetweenTPs = 0.4
 
@@ -195,7 +195,7 @@ local function autoTrialLoop(trialType)
             if timer then
                 local txt = normalize(timer.Text)
                 local isOpening = txt:find("opening !") or txt:find("opening!")
-                if (isZero or isOpening) and (tick() - lastTrialTrigger > 3) then
+                if (isOpening) and (tick() - lastTrialTrigger > 3) then
                     lastTrialTrigger = tick()
                     if not trialEnteredOnce then
                         local ok, err = pcall(function()
@@ -255,13 +255,13 @@ end
 
 
 -- =========================
--- Loop da Function 25 (InvokeServer no índice ajustável)
+-- Loop da Function 31 (InvokeServer no índice ajustável)
 -- =========================
 local function autoFunc25Loop()
     local funcs = ReplicatedStorage:WaitForChild("Communication"):WaitForChild("Functions")
-    local remote = funcs:GetChildren()[18]
+    local remote = funcs:GetChildren()[31]
     if not remote then
-        warn("[Func25] Remote 404.")
+        warn("[Func31] Remote 404.")
         return
     end
 
@@ -273,7 +273,7 @@ local function autoFunc25Loop()
         end)
 
         if not sucesso then
-            warn("[Func25] Error call InvokeServer:", retorno)
+            warn("[Func31] Error call InvokeServer:", retorno)
         end
 
         task.wait(5)
@@ -342,7 +342,8 @@ local orderedNames = {
     "Shadow Rank",
     "Vocation",
     "Respiration Token",
-    "Elemental Mark"
+    "Elemental Mark",
+     "Heart Gears"
 }
 local gachaMap = {
     ["Ninja Rank"] = "W1_1",
@@ -353,6 +354,7 @@ local gachaMap = {
     ["Vocation"] = "W3_2",
     ["Respiration Token"] = "W4_1",
     ["Elemental Mark"] = "W4_2",
+    ["Heart Gears"] = "W5_1"
 }
 local selectedName = orderedNames[1]
 local selectedArg = gachaMap[selectedName]
@@ -566,35 +568,56 @@ Tabs.Main:AddToggle("AutoTrialMedium", {
         end
     })
 
-    Tabs.Passives:AddButton({
-        Title = "Change Your Passive",
-        Description = "Click for change ur passive",
-        Callback = function()
-            local funcs = ReplicatedStorage:WaitForChild("Communication"):WaitForChild("Functions")
-            local remote = funcs:GetChildren()[30]
-            if not remote then
-                warn("[Func30] Remote 404")
-                return
-            end
-            local ok, res = pcall(function()
-                if remote:IsA("RemoteFunction") then
-                    return remote:InvokeServer(selectedPID)
-                elseif remote:IsA("RemoteEvent") then
-                    remote:FireServer(selectedPID)
-                    return true
-                end
-            end)
-            if ok then
-                print(string.format("[Func30] Executed: %s (%s). Return: %s",
-                    selectedPIDName, selectedPID, tostring(res)))
-            else
-                warn("[Func30] Error", res)
-            end
+    -- Botão único para chamar Functions[31] com selectedPID (sem loop)
+Tabs.Passives:AddButton({
+    Title = "Execute Function 31",
+    Description = "Chama Functions[31] uma vez com o PID selecionado",
+    Callback = function()
+        -- tenta obter a pasta Functions
+        local comm = ReplicatedStorage:FindFirstChild("Communication")
+        local funcs = comm and comm:FindFirstChild("Functions")
+        if not funcs then
+            warn("[Func31 Button] Communication/Functions não encontrada")
+            return
         end
-    })
+
+        -- pega o filho no índice 31
+        local children = funcs:GetChildren()
+        local remote = children[31]
+        if not remote then
+            warn(string.format("[Func31 Button] Nenhum child no índice 31 (total %d)", #children))
+            return
+        end
+
+        -- chama com pcall e usa selectedPID do seu dropdown
+        local ok, res = pcall(function()
+            if remote:IsA("RemoteFunction") then
+                return remote:InvokeServer(selectedPID)
+            elseif remote:IsA("RemoteEvent") then
+                remote:FireServer(selectedPID)
+                return true
+            else
+                error("Objeto no índice 31 não é RemoteFunction nem RemoteEvent")
+            end
+        end)
+
+        if ok then
+            print(string.format("[Func31 Button] Chamado %s com %s. Retorno: %s",
+                tostring(remote.Name), tostring(selectedPID), tostring(res)))
+            -- opcional: notificação via JsFramework se desejar
+            -- JsFramework.Signal.Fire("CustomNotification", "Func31 chamada com sucesso", { BackColor = Color3.fromRGB(128,255,106), TextColor = Color3.fromRGB(255,255,255), Timer = 2 })
+        else
+            warn(string.format("[Func31 Button] Erro ao chamar %s: %s",
+                tostring(remote.Name or "nil"), tostring(res)))
+            -- opcional: notificação de erro
+        end
+    end
+})
+
 
     -- NOVO: Dropdown + Botão Function 17 (nomes amigáveis → IDs)
     local f17Options = {
+        "Jyraua 30x Watter",
         "Etanor 25x Fire",
         "Satoru 20x Wind",
         "Esran 9x Earth",
@@ -604,9 +627,10 @@ Tabs.Main:AddToggle("AutoTrialMedium", {
         "Gann 3x Eath",
         "Emirya 4x Water",
         "Sorro 2x Wind",
-        "Akanu 1.5x Fire",
+        "Akanu 1.5x Fire"
     }
     local f17IdMap = {
+        ["Jyraua 30x Watter"] = "Jiraya",
         ["Etanor 25x Fire"] = "ID_9",
         ["Satoru 20x Wind"] = "ID_10",
         ["Esran 9x Earth"] = "ID_8",
@@ -616,7 +640,7 @@ Tabs.Main:AddToggle("AutoTrialMedium", {
         ["Gann 3x Eath"] = "ID_3",
         ["Emirya 4x Water"] = "ID_4",
         ["Sorro 2x Wind"] = "ID_2",
-        ["Akanu 1.5x Fire"] = "ID_1",
+        ["Akanu 1.5x Fire"] = "ID_1"
     }
     local selectedF17Name = f17Options[1]
     local selectedF17ID = f17IdMap[selectedF17Name]
