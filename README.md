@@ -546,18 +546,7 @@ Tabs.Main:AddToggle("AutoTrialMedium", {
         end
     })
 
-    Tabs.Main:AddToggle("AntiAFK", {
-        Title = "Anti AFK ",
-        Default = true,
-        Callback = function(state)
-            autoAfkOn = state
-            if autoAfkOn then
-                enableAfk()
-            else
-                disableAfk()
-            end
-        end
-    })
+
 
     -- Dropdown + Toggle AutoCall
     Tabs.Gachas:AddDropdown("GachaSelect", {
@@ -808,6 +797,87 @@ Tabs.Passives:AddButton({
             end
         end
     })
+    -- === NPC Teleport (adicionado ao mesmo Hub, Tabs.Main) ===
+local function NpcTp_GetNpcNames()
+    local names = {}
+    local success, clientFolder = pcall(function()
+        return workspace.__debris.__npcs.__client
+    end)
+    if not success or not clientFolder then return names end
+
+    for _, worldFolder in ipairs(clientFolder:GetChildren()) do
+        for _, npcFolder in ipairs(worldFolder:GetChildren()) do
+            local hb = npcFolder:FindFirstChild("EnemyHealthBar")
+            if hb and hb:FindFirstChild("Title") and hb.Title:IsA("TextLabel") then
+                local n = hb.Title.Text
+                if n and not table.find(names, n) then table.insert(names, n) end
+            end
+        end
+    end
+    return names
+end
+
+local NpcTp_Selected = {}
+local NpcTp_Multi = Tabs.Main:AddDropdown("NpcTp_Dropdown", {
+    Title = "NPC Teleport",
+    Description = "Selecione NPCs para teleportar",
+    Values = NpcTp_GetNpcNames(),
+    Multi = true,
+    Default = {}
+})
+
+NpcTp_Multi:OnChanged(function(value)
+    NpcTp_Selected = {}
+    for name, state in pairs(value) do
+        if state then table.insert(NpcTp_Selected, name) end
+    end
+end)
+
+Tabs.Main:AddButton({
+    Title = "🔄 Refresh NPCs",
+    Description = "Atualiza lista de NPCs vivos",
+    Callback = function()
+        local newList = NpcTp_GetNpcNames()
+        NpcTp_Multi:SetValues(newList)
+        Fluent:Notify({ Title = "NPC Teleport", Content = "Lista atualizada", Duration = 3 })
+    end
+})
+
+local NpcTp_Enabled = false
+local NpcTp_Toggle = Tabs.Main:AddToggle("NpcTp_Toggle", {
+    Title = "Auto TP NPCs",
+    Description = "Liga/desliga TP sequencial nos NPCs selecionados",
+    Default = false
+})
+
+local function NpcTp_FindByName(name)
+    local ok, clientFolder = pcall(function() return workspace.__debris.__npcs.__client end)
+    if not ok or not clientFolder then return nil end
+    for _, worldFolder in ipairs(clientFolder:GetChildren()) do
+        for _, npcFolder in ipairs(worldFolder:GetChildren()) do
+            local hb = npcFolder:FindFirstChild("EnemyHealthBar")
+            if hb and hb:FindFirstChild("Title") and hb.Title:IsA("TextLabel") then
+                if hb.Title.Text == name then return npcFolder end
+            end
+        end
+    end
+    return nil
+end
+    Tabs.Main:AddToggle("AntiAFK", {
+        Title = "Anti AFK ",
+        Default = true,
+        Callback = function(state)
+            autoAfkOn = state
+            if autoAfkOn then
+                enableAfk()
+            else
+                disableAfk()
+            end
+        end
+    })
+
+
+
 
     -- Aba Settings (SaveManager + InterfaceManager)
     local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
