@@ -104,7 +104,7 @@ end
 -- Variáveis de controle adicionadas:
 local trialEnterTimestamp = nil
 local roomWatcherRunning = false
-local roomWatcherPaused = false -- NOVO: quando true, watcher não inicia até nova trial
+local roomWatcherPaused = false -- quando true, watcher não inicia até nova trial
 
 -- Função utilitária: tenta extrair número de um TextLabel (retorna número ou nil)
 local function extractRoomNumberFromText(txt)
@@ -133,7 +133,6 @@ local function startRoomWatcher()
         if not roomWatcherRunning then return end
 
         local lastRoomNum = nil
-        local repeatCount = 0
 
         while roomWatcherRunning do
             local ok, roomLabel = pcall(function()
@@ -151,25 +150,24 @@ local function startRoomWatcher()
                 return label
             end)
 
-           if ok and roomLabel and roomLabel:IsA("TextLabel") then
-            local txt = roomLabel.Text
-            local currentNum = extractRoomNumberFromText(txt)
-            print(("[RoomWatcher] Room atual: %s (extraído: %s)"):format(txt, tostring(currentNum)))
+            if ok and roomLabel and roomLabel:IsA("TextLabel") then
+                local txt = roomLabel.Text
+                local currentNum = extractRoomNumberFromText(txt)
+                print(("[RoomWatcher] Room atual: %s (extraído: %s)"):format(txt, tostring(currentNum)))
 
-            if lastRoomNum ~= nil and currentNum ~= nil and currentNum == lastRoomNum then
-                print("[RoomWatcher] Sala travada. Executando Auto Exit.")
-                JsFramework.Network:FireServer("Dungeon_RequestLeave")
-                roomWatcherRunning = false
-                return
+                if lastRoomNum ~= nil and currentNum ~= nil and currentNum == lastRoomNum then
+                    print("[RoomWatcher] Sala travada. Executando Auto Exit.")
+                    pcall(function() JsFramework.Network:FireServer("Dungeon_RequestLeave") end)
+                    roomWatcherRunning = false
+                    return
+                end
+
+                if currentNum ~= nil then
+                    lastRoomNum = currentNum
+                end
+            else
+                warn("[RoomWatcher] Não encontrou RoomLabel no caminho esperado")
             end
-
-            if currentNum ~= nil then
-                lastRoomNum = currentNum
-            end
-        else
-            warn("[RoomWatcher] Não encontrou RoomLabel no caminho esperado")
-end
-
 
             task.wait(20)
         end
@@ -177,7 +175,6 @@ end
         roomWatcherRunning = false
     end)
 end
-
 
 local function stopRoomWatcher()
     roomWatcherRunning = false
@@ -209,7 +206,7 @@ local function autoTrialLoop(trialType)
                             roomWatcherPaused = false
                             startRoomWatcher()
 
-                            -- Pausa Auto Farm por 10s e reativa
+                            -- Pausa Auto Farm por 10s e reativa depois de 60s
                             autoFarmOn = false
                             print("[AutoTrial] Auto Farm desativado por 10s.")
                             task.delay(60, function()
@@ -232,7 +229,7 @@ local function autoTrialLoop(trialType)
                                     task.wait(20)
                                     if label.Text == initialRoom then
                                         print("[AutoTrial] Sala não mudou em 20s. Saindo da trial.")
-                                        JsFramework.Network:FireServer("Dungeon_RequestLeave")
+                                        pcall(function() JsFramework.Network:FireServer("Dungeon_RequestLeave") end)
                                     end
                                 end
                             end)
@@ -430,8 +427,6 @@ local function startAutoPlayerPassiveSpin()
                     TextColor = Color3.fromRGB(255, 255, 255),
                     Timer = 1
                 })
-                -- você pode logar o id retornado se quiser
-                -- print("[AutoSpinPlayer] Retorno:", tostring(res))
             else
                 warn("[AutoSpinPlayer] Falha ao chamar roll_p_passive:", tostring(res))
                 JsFramework.Signal.Fire("CustomNotification", "Spin failed", {
@@ -439,7 +434,6 @@ local function startAutoPlayerPassiveSpin()
                     TextColor = Color3.fromRGB(255, 255, 255),
                     Timer = 2
                 })
-                -- em caso de falhas repetidas, pode-se pausar automaticamente (não implementado por padrão)
             end
 
             task.wait(PLAYER_SPIN_INTERVAL)
@@ -452,6 +446,7 @@ local function stopAutoPlayerPassiveSpin()
     autoPlayerPassiveSpinOn = false
     print("[AutoSpinPlayer] Parado")
 end
+
 -- =========================
 -- Fluent UI (com Settings)
 -- =========================
@@ -496,40 +491,39 @@ else
         end
     })
 
-   Tabs.Main:AddToggle("AutoTrialEasy", {
-    Title = "Auto Trial Easy",
-    Description = "Entra automaticamente na trial Easy",
-    Default = false,
-    Callback = function(state)
-        autoTrialEasyOn = state
-        if state then
-            print("🟢 Auto Trial Easy ON")
-            trialEnteredOnce = false
-            lastTrialTrigger = 0
-            autoTrialLoop("easy")
-        else
-            print("🔴 Auto Trial Easy OFF")
+    Tabs.Main:AddToggle("AutoTrialEasy", {
+        Title = "Auto Trial Easy",
+        Description = "Entra automaticamente na trial Easy",
+        Default = false,
+        Callback = function(state)
+            autoTrialEasyOn = state
+            if state then
+                print("🟢 Auto Trial Easy ON")
+                trialEnteredOnce = false
+                lastTrialTrigger = 0
+                autoTrialLoop("easy")
+            else
+                print("🔴 Auto Trial Easy OFF")
+            end
         end
-    end
-})
+    })
 
-Tabs.Main:AddToggle("AutoTrialMedium", {
-    Title = "Auto Trial Medium",
-    Description = "Entra automaticamente na trial Medium",
-    Default = false,
-    Callback = function(state)
-        autoTrialMediumOn = state
-        if state then
-            print("🟢 Auto Trial Medium ON")
-            trialEnteredOnce = false
-            lastTrialTrigger = 0
-            autoTrialLoop("medium")
-        else
-            print("🔴 Auto Trial Medium OFF")
+    Tabs.Main:AddToggle("AutoTrialMedium", {
+        Title = "Auto Trial Medium",
+        Description = "Entra automaticamente na trial Medium",
+        Default = false,
+        Callback = function(state)
+            autoTrialMediumOn = state
+            if state then
+                print("🟢 Auto Trial Medium ON")
+                trialEnteredOnce = false
+                lastTrialTrigger = 0
+                autoTrialLoop("medium")
+            else
+                print("🔴 Auto Trial Medium OFF")
+            end
         end
-    end
-})
-
+    })
 
     Tabs.Avatar:AddToggle("SpinAvatar", {
         Title = "Auto Spin Avatar",
@@ -545,8 +539,6 @@ Tabs.Main:AddToggle("AutoTrialMedium", {
             end
         end
     })
-
-
 
     -- Dropdown + Toggle AutoCall
     Tabs.Gachas:AddDropdown("GachaSelect", {
@@ -601,51 +593,44 @@ Tabs.Main:AddToggle("AutoTrialMedium", {
     })
 
     -- Botão único para chamar Functions[31] com selectedPID (sem loop)
-Tabs.Passives:AddButton({
-    Title = "Execute Function 31",
-    Description = "Chama Functions[31] uma vez com o PID selecionado",
-    Callback = function()
-        -- tenta obter a pasta Functions
-        local comm = ReplicatedStorage:FindFirstChild("Communication")
-        local funcs = comm and comm:FindFirstChild("Functions")
-        if not funcs then
-            warn("[Func31 Button] Communication/Functions não encontrada")
-            return
-        end
-
-        -- pega o filho no índice 31
-        local children = funcs:GetChildren()
-        local remote = children[31]
-        if not remote then
-            warn(string.format("[Func31 Button] Nenhum child no índice 31 (total %d)", #children))
-            return
-        end
-
-        -- chama com pcall e usa selectedPID do seu dropdown
-        local ok, res = pcall(function()
-            if remote:IsA("RemoteFunction") then
-                return remote:InvokeServer(selectedPID)
-            elseif remote:IsA("RemoteEvent") then
-                remote:FireServer(selectedPID)
-                return true
-            else
-                error("Objeto no índice 31 não é RemoteFunction nem RemoteEvent")
+    Tabs.Passives:AddButton({
+        Title = "Execute Function 31",
+        Description = "Chama Functions[31] uma vez com o PID selecionado",
+        Callback = function()
+            local comm = ReplicatedStorage:FindFirstChild("Communication")
+            local funcs = comm and comm:FindFirstChild("Functions")
+            if not funcs then
+                warn("[Func31 Button] Communication/Functions não encontrada")
+                return
             end
-        end)
 
-        if ok then
-            print(string.format("[Func31 Button] Chamado %s com %s. Retorno: %s",
-                tostring(remote.Name), tostring(selectedPID), tostring(res)))
-            -- opcional: notificação via JsFramework se desejar
-            -- JsFramework.Signal.Fire("CustomNotification", "Func31 chamada com sucesso", { BackColor = Color3.fromRGB(128,255,106), TextColor = Color3.fromRGB(255,255,255), Timer = 2 })
-        else
-            warn(string.format("[Func31 Button] Erro ao chamar %s: %s",
-                tostring(remote.Name or "nil"), tostring(res)))
-            -- opcional: notificação de erro
+            local children = funcs:GetChildren()
+            local remote = children[31]
+            if not remote then
+                warn(string.format("[Func31 Button] Nenhum child no índice 31 (total %d)", #children))
+                return
+            end
+
+            local ok, res = pcall(function()
+                if remote:IsA("RemoteFunction") then
+                    return remote:InvokeServer(selectedPID)
+                elseif remote:IsA("RemoteEvent") then
+                    remote:FireServer(selectedPID)
+                    return true
+                else
+                    error("Objeto no índice 31 não é RemoteFunction nem RemoteEvent")
+                end
+            end)
+
+            if ok then
+                print(string.format("[Func31 Button] Chamado %s com %s. Retorno: %s",
+                    tostring(remote.Name), tostring(selectedPID), tostring(res)))
+            else
+                warn(string.format("[Func31 Button] Erro ao chamar %s: %s",
+                    tostring(remote.Name or "nil"), tostring(res)))
+            end
         end
-    end
-})
-
+    })
 
     -- NOVO: Dropdown + Botão Function 17 (nomes amigáveis → IDs)
     local f17Options = {
@@ -721,22 +706,22 @@ Tabs.Passives:AddButton({
             end
         end
     })
+
     Tabs.Passives:AddToggle("AutoSpinPlayerPassives", {
-    Title = "Auto Spin Player Passives",
-    Description = "Liga/desliga auto-spin das passivas do Player",
-    Default = false,
-    Callback = function(state)
-        if state then
-            -- evita conflitos com outros auto-spins já existentes
-            if autoPlayerPassiveSpinOn then return end
-            startAutoPlayerPassiveSpin()
-            print("🟢 Auto Spin Player ON")
-        else
-            stopAutoPlayerPassiveSpin()
-            print("🔴 Auto Spin Player OFF")
+        Title = "Auto Spin Player Passives",
+        Description = "Liga/desliga auto-spin das passivas do Player",
+        Default = false,
+        Callback = function(state)
+            if state then
+                if autoPlayerPassiveSpinOn then return end
+                startAutoPlayerPassiveSpin()
+                print("🟢 Auto Spin Player ON")
+            else
+                stopAutoPlayerPassiveSpin()
+                print("🔴 Auto Spin Player OFF")
+            end
         end
-    end
-})
+    })
 
     -- NOVO: Dropdown + Botão Function 22 (nomes amigáveis → args duplos)
     local f22Options = {
@@ -797,72 +782,148 @@ Tabs.Passives:AddButton({
             end
         end
     })
+
     -- === NPC Teleport (adicionado ao mesmo Hub, Tabs.Main) ===
-local function NpcTp_GetNpcNames()
-    local names = {}
-    local success, clientFolder = pcall(function()
-        return workspace.__debris.__npcs.__client
+    -- Função para obter nomes de NPCs vivos
+    local function NpcTp_GetNpcNames()
+        local names = {}
+        local success, clientFolder = pcall(function()
+            return workspace.__debris.__npcs.__client
+        end)
+        if not success or not clientFolder then return names end
+
+        for _, worldFolder in ipairs(clientFolder:GetChildren()) do
+            for _, npcFolder in ipairs(worldFolder:GetChildren()) do
+                local hb = npcFolder:FindFirstChild("EnemyHealthBar")
+                if hb and hb:FindFirstChild("Title") and hb.Title:IsA("TextLabel") then
+                    local n = hb.Title.Text
+                    if n and not table.find(names, n) then table.insert(names, n) end
+                end
+            end
+        end
+        return names
+    end
+
+    local NpcTp_Selected = {}
+    local NpcTp_Multi = Tabs.Main:AddDropdown("NpcTp_Dropdown", {
+        Title = "NPC Teleport",
+        Description = "Selecione NPCs para teleportar",
+        Values = NpcTp_GetNpcNames(),
+        Multi = true,
+        Default = {}
+    })
+
+    NpcTp_Multi:OnChanged(function(value)
+        NpcTp_Selected = {}
+        for name, state in pairs(value) do
+            if state then table.insert(NpcTp_Selected, name) end
+        end
     end)
-    if not success or not clientFolder then return names end
 
-    for _, worldFolder in ipairs(clientFolder:GetChildren()) do
-        for _, npcFolder in ipairs(worldFolder:GetChildren()) do
-            local hb = npcFolder:FindFirstChild("EnemyHealthBar")
-            if hb and hb:FindFirstChild("Title") and hb.Title:IsA("TextLabel") then
-                local n = hb.Title.Text
-                if n and not table.find(names, n) then table.insert(names, n) end
+    Tabs.Main:AddButton({
+        Title = "🔄 Refresh NPCs",
+        Description = "Atualiza lista de NPCs vivos",
+        Callback = function()
+            local newList = NpcTp_GetNpcNames()
+            NpcTp_Multi:SetValues(newList)
+            Fluent:Notify({ Title = "NPC Teleport", Content = "Lista atualizada", Duration = 3 })
+        end
+    })
+
+    local NpcTp_Enabled = false
+    local NpcTp_Toggle = Tabs.Main:AddToggle("NpcTp_Toggle", {
+        Title = "Auto TP NPCs",
+        Description = "Liga/desliga TP sequencial nos NPCs selecionados",
+        Default = false
+    })
+
+    local function NpcTp_FindByName(name)
+        local ok, clientFolder = pcall(function() return workspace.__debris.__npcs.__client end)
+        if not ok or not clientFolder then return nil end
+        for _, worldFolder in ipairs(clientFolder:GetChildren()) do
+            for _, npcFolder in ipairs(worldFolder:GetChildren()) do
+                local hb = npcFolder:FindFirstChild("EnemyHealthBar")
+                if hb and hb:FindFirstChild("Title") and hb.Title:IsA("TextLabel") then
+                    if hb.Title.Text == name then return npcFolder end
+                end
             end
         end
+        return nil
     end
-    return names
-end
 
-local NpcTp_Selected = {}
-local NpcTp_Multi = Tabs.Main:AddDropdown("NpcTp_Dropdown", {
-    Title = "NPC Teleport",
-    Description = "Selecione NPCs para teleportar",
-    Values = NpcTp_GetNpcNames(),
-    Multi = true,
-    Default = {}
-})
+    -- Sequência de teleporte corrigida para NPC Teleport
+    local function NpcTp_Sequence()
+        local PlayersSvc = game:GetService("Players")
+        local LocalP = PlayersSvc.LocalPlayer
 
-NpcTp_Multi:OnChanged(function(value)
-    NpcTp_Selected = {}
-    for name, state in pairs(value) do
-        if state then table.insert(NpcTp_Selected, name) end
-    end
-end)
+        NpcTp_Selected = NpcTp_Selected or {}
 
-Tabs.Main:AddButton({
-    Title = "🔄 Refresh NPCs",
-    Description = "Atualiza lista de NPCs vivos",
-    Callback = function()
-        local newList = NpcTp_GetNpcNames()
-        NpcTp_Multi:SetValues(newList)
-        Fluent:Notify({ Title = "NPC Teleport", Content = "Lista atualizada", Duration = 3 })
-    end
-})
+        while NpcTp_Enabled and #NpcTp_Selected > 0 do
+            for _, name in ipairs(NpcTp_Selected) do
+                if not NpcTp_Enabled then break end
 
-local NpcTp_Enabled = false
-local NpcTp_Toggle = Tabs.Main:AddToggle("NpcTp_Toggle", {
-    Title = "Auto TP NPCs",
-    Description = "Liga/desliga TP sequencial nos NPCs selecionados",
-    Default = false
-})
+                local npcFolder = NpcTp_FindByName(name)
+                if not (npcFolder and npcFolder.Parent) then
+                    task.wait(0.6)
+                    continue
+                end
 
-local function NpcTp_FindByName(name)
-    local ok, clientFolder = pcall(function() return workspace.__debris.__npcs.__client end)
-    if not ok or not clientFolder then return nil end
-    for _, worldFolder in ipairs(clientFolder:GetChildren()) do
-        for _, npcFolder in ipairs(worldFolder:GetChildren()) do
-            local hb = npcFolder:FindFirstChild("EnemyHealthBar")
-            if hb and hb:FindFirstChild("Title") and hb.Title:IsA("TextLabel") then
-                if hb.Title.Text == name then return npcFolder end
+                local char = LocalP.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    local target = npcFolder:FindFirstChild("HumanoidRootPart") or npcFolder.PrimaryPart
+                    if target then
+                        pcall(function() hrp.CFrame = target.CFrame + Vector3.new(0, 5, 0) end)
+                    end
+                end
+
+                -- espera até o NPC morrer (vida zerar) ou sumir
+                local hb = npcFolder:FindFirstChild("EnemyHealthBar")
+                if hb then
+                    local healthValue = hb:FindFirstChild("Health")
+                    if healthValue and healthValue:IsA("NumberValue") then
+                        repeat
+                            if not NpcTp_Enabled or not npcFolder.Parent then break end
+                            local ok = pcall(function()
+                                if healthValue.GetPropertyChangedSignal then
+                                    healthValue:GetPropertyChangedSignal("Value"):Wait()
+                                else
+                                    healthValue.Changed:Wait()
+                                end
+                            end)
+                            if not ok then task.wait(0.5) end
+                        until (not healthValue.Parent) or healthValue.Value <= 0 or not NpcTp_Enabled or not npcFolder.Parent
+                    else
+                        local watchdog = 0
+                        while npcFolder.Parent and NpcTp_Enabled do
+                            local okHb = npcFolder:FindFirstChild("EnemyHealthBar")
+                            if not okHb or not okHb:FindFirstChild("Title") then break end
+                            task.wait(0.3)
+                            watchdog = watchdog + 1
+                            if watchdog > 100 then break end
+                        end
+                    end
+                else
+                    task.wait(0.7)
+                end
+
+                task.wait(0.2)
             end
+
+            task.wait(0.2)
         end
     end
-    return nil
-end
+
+    -- conecta toggle (assegure-se de que NpcTp_Toggle já foi criado)
+    NpcTp_Toggle:OnChanged(function(state)
+        NpcTp_Enabled = state
+        NpcTp_Toggle:SetTitle("Auto TP [" .. (state and "ON" or "OFF") .. "]")
+        if state then
+            task.spawn(NpcTp_Sequence)
+        end
+    end)
+
+    -- Re-define/coloca AntiAFK toggle aqui (garante que exista apenas um handler)
     Tabs.Main:AddToggle("AntiAFK", {
         Title = "Anti AFK ",
         Default = true,
@@ -876,9 +937,6 @@ end
         end
     })
 
-
-
-
     -- Aba Settings (SaveManager + InterfaceManager)
     local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
     local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
@@ -891,6 +949,5 @@ end
 
     Window:SelectTab(1)
 end
-
 
 print("[Script] loaded successfully")
