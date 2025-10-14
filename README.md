@@ -81,7 +81,7 @@ end
 local npcRoot = Workspace:WaitForChild("__debris"):WaitForChild("__npcs"):WaitForChild("__client")
 local idFolders = {"ID_1","ID_2","ID_3","ID_4","ID_5"}
 local approachOffset = Vector3.new(0, 3, 3)
-local delayBetweenTPs = 0.4
+local delayBetweenTPs = 0.2
 
 local function gatherTargets()
     local out = {}
@@ -320,61 +320,17 @@ local function autoFunc25Loop()
 end
 
         -- =========================
-        -- Anti-AFK (VirtualUser + nudge camera)
+        -- Anti-AFK 
         -- =========================
-        local afkIdledConn = nil
+        local VirtualInputManager = game:GetService("VirtualInputManager")
 
-        local function nudgeCamera()
-            local cam = workspace.CurrentCamera
-            if not cam then return end
-            VirtualUser:Button2Down(Vector2.new(0,0), cam.CFrame)
-            task.wait(0.12 + math.random() * 0.15)
-            VirtualUser:Button2Up(Vector2.new(0,0), cam.CFrame)
-        end
-
-        local function virtualClick()
-            local cam = workspace.CurrentCamera
-            if not cam then return end
-            VirtualUser:Button2Down(Vector2.new(0,0), cam.CFrame)
-            task.wait(0.85 + math.random() * 0.6)
-            VirtualUser:Button2Up(Vector2.new(0,0), cam.CFrame)
-        end
-
-        local function enableAfk()
-            if afkIdledConn then return end
-            afkIdledConn = LocalPlayer.Idled:Connect(function()
-                if math.random() < 0.6 then
-                    virtualClick()
-                else
-                    nudgeCamera()
-                end
-            end)
-            print("🟢 [AFK] ON")
-        end
-
-        local function disableAfk()
-            if afkIdledConn then
-                afkIdledConn:Disconnect()
-                afkIdledConn = nil
-            end
-            print("🔴 [AFK] Off")
-        end
-        local VirtualUser = game:GetService("VirtualUser")
-
-        local function screenClick()
-            -- Simula clique na posição (500, 500) da tela
-            VirtualUser:Button1Down(Vector2.new(500, 500))
-            task.wait(0.1)
-            VirtualUser:Button1Up(Vector2.new(500, 500))
-            print("[AntiAFK] Clique na tela simulado")
-        end
-
-        -- Loop automático
-        task.spawn(function()
-            while true do
-                task.wait(60) -- a cada 60 segundos
-                screenClick()
-            end
+    task.spawn(function()
+    while true do
+        task.wait(60) -- espera 60 segundos (1 minuto)
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.P, false, game) -- simula pressionar P
+        task.wait(0.1)
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.P, false, game) -- simula soltar P
+    end
 end)
 
 -- =========================
@@ -997,6 +953,10 @@ else
             end
         end
     })
+    Tabs.Main:AddParagraph({
+    Title = "AFK SYSTEM",
+    Content = "Afk System is running!"
+})
 
     -- Aba Settings (SaveManager + InterfaceManager)
     local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
