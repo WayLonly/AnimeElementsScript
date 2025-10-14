@@ -15,8 +15,11 @@ local autoFarmOn = false
 local autoTrialOn = false
 local autoFunc25On = false
 local autoAfkOn = false
+
 local trialEnteredOnce = false
 local lastTrialTrigger = 0
+local savedToggleStates = nil
+
 
 -- =========================
 -- Utilidades
@@ -36,6 +39,41 @@ local function normalize(s)
     s = s:lower():gsub("%s+", " ")
     return s
 end
+local function saveToggleStates()
+    savedToggleStates = {
+        autoFarmOn = autoFarmOn,
+        autoFunc25On = autoFunc25On,
+        NpcTp_Enabled = NpcTp_Enabled 
+    }
+    print("[Trial] Estados salvos:", savedToggleStates)
+end
+
+local function restoreToggleStates()
+    if not savedToggleStates then return end
+
+    autoFarmOn = savedToggleStates.autoFarmOn
+    NpcTp_Enabled = savedToggleStates.NpcTp_Enabled
+    autoFunc25On = savedToggleStates.autoFunc25On
+
+    print("[Trial] Estados restaurados.")
+end
+
+local function monitorTrialResults()
+    task.spawn(function()
+        local gui = Players.LocalPlayer:WaitForChild("PlayerGui")
+        local resultsFrame = gui:WaitForChild("_Modes"):WaitForChild("Frame"):WaitForChild("Trial"):WaitForChild("Results")
+
+        while true do
+            if resultsFrame.Visible then
+                print("[Trial] Interface de recompensas visível. Dungeon finalizada.")
+                restoreToggleStates()
+                break
+            end
+            task.wait(1)
+        end
+    end)
+end
+
 
 -- =========================
 -- Auto Farm NPCs
@@ -158,6 +196,7 @@ local function startRoomWatcher()
                 if lastRoomNum ~= nil and currentNum ~= nil and currentNum == lastRoomNum then
                     print("[RoomWatcher] Sala travada. Executando Auto Exit.")
                     pcall(function() JsFramework.Network:FireServer("Dungeon_RequestLeave") end)
+                    restoreToggleStates()
                     roomWatcherRunning = false
                     return
                 end
@@ -204,10 +243,13 @@ local function autoTrialLoop(trialType)
                             trialEnteredOnce = true
                             trialEnterTimestamp = tick()
                             roomWatcherPaused = false
+                            saveToggleStates()
+                            monitorTrialResults()
                             startRoomWatcher()
 
                             -- Pausa Auto Farm por 10s e reativa depois de 60s
                             autoFarmOn = false
+                            NpcTp_Enabled = false
                             print("[AutoTrial] Auto Farm desativado por 10s.")
                             task.delay(60, function()
                                 autoFarmOn = true
@@ -277,46 +319,63 @@ local function autoFunc25Loop()
     end
 end
 
--- =========================
--- Anti-AFK (VirtualUser + nudge camera)
--- =========================
-local afkIdledConn = nil
+        -- =========================
+        -- Anti-AFK (VirtualUser + nudge camera)
+        -- =========================
+        local afkIdledConn = nil
 
-local function nudgeCamera()
-    local cam = workspace.CurrentCamera
-    if not cam then return end
-    VirtualUser:Button2Down(Vector2.new(0,0), cam.CFrame)
-    task.wait(0.12 + math.random() * 0.15)
-    VirtualUser:Button2Up(Vector2.new(0,0), cam.CFrame)
-end
-
-local function virtualClick()
-    local cam = workspace.CurrentCamera
-    if not cam then return end
-    VirtualUser:Button2Down(Vector2.new(0,0), cam.CFrame)
-    task.wait(0.85 + math.random() * 0.6)
-    VirtualUser:Button2Up(Vector2.new(0,0), cam.CFrame)
-end
-
-local function enableAfk()
-    if afkIdledConn then return end
-    afkIdledConn = LocalPlayer.Idled:Connect(function()
-        if math.random() < 0.6 then
-            virtualClick()
-        else
-            nudgeCamera()
+        local function nudgeCamera()
+            local cam = workspace.CurrentCamera
+            if not cam then return end
+            VirtualUser:Button2Down(Vector2.new(0,0), cam.CFrame)
+            task.wait(0.12 + math.random() * 0.15)
+            VirtualUser:Button2Up(Vector2.new(0,0), cam.CFrame)
         end
-    end)
-    print("🟢 [AFK] ON")
-end
 
-local function disableAfk()
-    if afkIdledConn then
-        afkIdledConn:Disconnect()
-        afkIdledConn = nil
-    end
-    print("🔴 [AFK] Off")
-end
+        local function virtualClick()
+            local cam = workspace.CurrentCamera
+            if not cam then return end
+            VirtualUser:Button2Down(Vector2.new(0,0), cam.CFrame)
+            task.wait(0.85 + math.random() * 0.6)
+            VirtualUser:Button2Up(Vector2.new(0,0), cam.CFrame)
+        end
+
+        local function enableAfk()
+            if afkIdledConn then return end
+            afkIdledConn = LocalPlayer.Idled:Connect(function()
+                if math.random() < 0.6 then
+                    virtualClick()
+                else
+                    nudgeCamera()
+                end
+            end)
+            print("🟢 [AFK] ON")
+        end
+
+        local function disableAfk()
+            if afkIdledConn then
+                afkIdledConn:Disconnect()
+                afkIdledConn = nil
+            end
+            print("🔴 [AFK] Off")
+        end
+        local VirtualUser = game:GetService("VirtualUser")
+
+        local function screenClick()
+            -- Simula clique na posição (500, 500) da tela
+            VirtualUser:Button1Down(Vector2.new(500, 500))
+            task.wait(0.1)
+            VirtualUser:Button1Up(Vector2.new(500, 500))
+            print("[AntiAFK] Clique na tela simulado")
+        end
+
+        -- Loop automático
+        task.spawn(function()
+            while true do
+                task.wait(60) -- a cada 60 segundos
+                screenClick()
+            end
+end)
 
 -- =========================
 -- AutoCall Function 21 (Dropdown + Toggle)
@@ -338,6 +397,7 @@ local orderedNames = {
     "Kaioken Token",
     "Shadow Rank",
     "Vocation",
+    "Vessel Crystal",
     "Respiration Token",
     "Elemental Mark",
      "Heart Gears"
@@ -349,6 +409,7 @@ local gachaMap = {
     ["Kaioken Token"] = "W2_2",
     ["Shadow Rank"] = "W3_1",
     ["Vocation"] = "W3_2",
+    ["Vessel Crystal"] = "W3_3",
     ["Respiration Token"] = "W4_1",
     ["Elemental Mark"] = "W4_2",
     ["Heart Gears"] = "W5_1"
