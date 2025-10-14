@@ -15,11 +15,8 @@ local autoFarmOn = false
 local autoTrialOn = false
 local autoFunc25On = false
 local autoAfkOn = false
-
 local trialEnteredOnce = false
 local lastTrialTrigger = 0
-local savedToggleStates = nil
-
 
 -- =========================
 -- Utilidades
@@ -39,41 +36,6 @@ local function normalize(s)
     s = s:lower():gsub("%s+", " ")
     return s
 end
-local function saveToggleStates()
-    savedToggleStates = {
-        autoFarmOn = autoFarmOn,
-        autoFunc25On = autoFunc25On,
-        NpcTp_Enabled = NpcTp_Enabled 
-    }
-    print("[Trial] Estados salvos:", savedToggleStates)
-end
-
-local function restoreToggleStates()
-    if not savedToggleStates then return end
-
-    autoFarmOn = savedToggleStates.autoFarmOn
-    NpcTp_Enabled = savedToggleStates.NpcTp_Enabled
-    autoFunc25On = savedToggleStates.autoFunc25On
-
-    print("[Trial] Estados restaurados.")
-end
-
-local function monitorTrialResults()
-    task.spawn(function()
-        local gui = Players.LocalPlayer:WaitForChild("PlayerGui")
-        local resultsFrame = gui:WaitForChild("_Modes"):WaitForChild("Frame"):WaitForChild("Trial"):WaitForChild("Results")
-
-        while true do
-            if resultsFrame.Visible then
-                print("[Trial] Interface de recompensas visível. Dungeon finalizada.")
-                restoreToggleStates()
-                break
-            end
-            task.wait(1)
-        end
-    end)
-end
-
 
 -- =========================
 -- Auto Farm NPCs
@@ -81,7 +43,8 @@ end
 local npcRoot = Workspace:WaitForChild("__debris"):WaitForChild("__npcs"):WaitForChild("__client")
 local idFolders = {"ID_1","ID_2","ID_3","ID_4","ID_5"}
 local approachOffset = Vector3.new(0, 3, 3)
-local delayBetweenTPs = 0.2
+local delayBetweenTPs = 0.1
+
 
 local function gatherTargets()
     local out = {}
@@ -109,14 +72,52 @@ local function autoFarmLoop()
         local npcs = gatherTargets()
         for _, entry in ipairs(npcs) do
             if not autoFarmOn then break end
-            if entry.hrp and entry.hrp.Parent then
-                safeTeleportTo(entry.hrp.CFrame * CFrame.new(approachOffset))
+
+            local hrp = entry.hrp
+            local model = hrp and hrp.Parent
+            local humanoid = model and model:FindFirstChildOfClass("Humanoid")
+
+            if hrp and model and humanoid then
+                safeTeleportTo(hrp.CFrame * CFrame.new(approachOffset))
+
+                -- Espera até o NPC morrer ou sumir
+                local hb = model:FindFirstChild("EnemyHealthBar")
+                if hb then
+                    local healthValue = hb:FindFirstChild("Health")
+                    if healthValue and healthValue:IsA("NumberValue") then
+                        repeat
+                            if not autoFarmOn or not model.Parent then break end
+                            local ok = pcall(function()
+                                if healthValue.GetPropertyChangedSignal then
+                                    healthValue:GetPropertyChangedSignal("Value"):Wait()
+                                else
+                                    healthValue.Changed:Wait()
+                                end
+                            end)
+                            if not ok then task.wait(0.15) end
+                        until (not healthValue.Parent) or healthValue.Value <= 0 or not autoFarmOn or not model.Parent
+                    else
+                        local watchdog = 0
+                        while model.Parent and autoFarmOn do
+                            local okHb = model:FindFirstChild("EnemyHealthBar")
+                            if not okHb or not okHb:FindFirstChild("Title") then break end
+                            task.wait(0.1)
+                            watchdog = watchdog + 1
+                            if watchdog > 100 then break end
+                        end
+                    end
+                else
+                    task.wait(0.1)
+                end
+
                 task.wait(delayBetweenTPs)
             end
         end
-        task.wait(0.2)
+        task.wait(0.1)
     end
 end
+
+
 
 local function findTrialTimer(trialType)
     local portals = Workspace:FindFirstChild("__Portals") or Workspace:FindFirstChild("_Portals")
@@ -196,7 +197,6 @@ local function startRoomWatcher()
                 if lastRoomNum ~= nil and currentNum ~= nil and currentNum == lastRoomNum then
                     print("[RoomWatcher] Sala travada. Executando Auto Exit.")
                     pcall(function() JsFramework.Network:FireServer("Dungeon_RequestLeave") end)
-                    restoreToggleStates()
                     roomWatcherRunning = false
                     return
                 end
@@ -243,13 +243,10 @@ local function autoTrialLoop(trialType)
                             trialEnteredOnce = true
                             trialEnterTimestamp = tick()
                             roomWatcherPaused = false
-                            saveToggleStates()
-                            monitorTrialResults()
                             startRoomWatcher()
 
                             -- Pausa Auto Farm por 10s e reativa depois de 60s
                             autoFarmOn = false
-                            NpcTp_Enabled = false
                             print("[AutoTrial] Auto Farm desativado por 10s.")
                             task.delay(60, function()
                                 autoFarmOn = true
@@ -319,19 +316,6 @@ local function autoFunc25Loop()
     end
 end
 
-        -- =========================
-        -- Anti-AFK 
-        -- =========================
-        local VirtualInputManager = game:GetService("VirtualInputManager")
-
-    task.spawn(function()
-    while true do
-        task.wait(60) -- espera 60 segundos (1 minuto)
-        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.P, false, game) -- simula pressionar P
-        task.wait(0.1)
-        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.P, false, game) -- simula soltar P
-    end
-end)
 
 -- =========================
 -- AutoCall Function 21 (Dropdown + Toggle)
@@ -464,6 +448,20 @@ local function stopAutoPlayerPassiveSpin()
     print("[AutoSpinPlayer] Parado")
 end
 
+        -- =========================
+        -- Anti-AFK 
+        -- =========================
+        local VirtualInputManager = game:GetService("VirtualInputManager")
+
+        task.spawn(function()
+        while true do
+            task.wait(60) -- espera 60 segundos (1 minuto)
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.P, false, game) -- simula pressionar P
+            task.wait(0.1)
+            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.P, false, game) -- simula soltar P
+        end
+end)
+
 -- =========================
 -- Fluent UI (com Settings)
 -- =========================
@@ -485,6 +483,7 @@ else
 
     local Tabs = {
         Main = Window:AddTab({ Title = "Main", Icon = "hammer" }),
+        Trial = Window:AddTab({ Title = "Trial", Icon = "aperture" }),
         Avatar = Window:AddTab({ Title = "Avatar", Icon = "users" }),
         Passives = Window:AddTab({ Title = "Passives", Icon = "swords" }),
         Gachas = Window:AddTab({ Title = "Gachas", Icon = "aperture" }),
@@ -508,7 +507,7 @@ else
         end
     })
 
-    Tabs.Main:AddToggle("AutoTrialEasy", {
+    Tabs.Trial:AddToggle("AutoTrialEasy", {
         Title = "Auto Trial Easy",
         Description = "Entra automaticamente na trial Easy",
         Default = false,
@@ -525,7 +524,7 @@ else
         end
     })
 
-    Tabs.Main:AddToggle("AutoTrialMedium", {
+    Tabs.Trial:AddToggle("AutoTrialMedium", {
         Title = "Auto Trial Medium",
         Description = "Entra automaticamente na trial Medium",
         Default = false,
@@ -881,7 +880,7 @@ else
 
                 local npcFolder = NpcTp_FindByName(name)
                 if not (npcFolder and npcFolder.Parent) then
-                    task.wait(0.6)
+                    task.wait(0.2)
                     continue
                 end
 
@@ -908,26 +907,26 @@ else
                                     healthValue.Changed:Wait()
                                 end
                             end)
-                            if not ok then task.wait(0.5) end
+                            if not ok then task.wait(0.15) end
                         until (not healthValue.Parent) or healthValue.Value <= 0 or not NpcTp_Enabled or not npcFolder.Parent
                     else
                         local watchdog = 0
                         while npcFolder.Parent and NpcTp_Enabled do
                             local okHb = npcFolder:FindFirstChild("EnemyHealthBar")
                             if not okHb or not okHb:FindFirstChild("Title") then break end
-                            task.wait(0.3)
+                            task.wait(0.15)
                             watchdog = watchdog + 1
                             if watchdog > 100 then break end
                         end
                     end
                 else
-                    task.wait(0.7)
+                    task.wait(0.1)
                 end
 
-                task.wait(0.2)
+                task.wait(0.1)
             end
 
-            task.wait(0.2)
+            task.wait(0.1)
         end
     end
 
@@ -940,23 +939,12 @@ else
         end
     end)
 
-    -- Re-define/coloca AntiAFK toggle aqui (garante que exista apenas um handler)
-    Tabs.Main:AddToggle("AntiAFK", {
-        Title = "Anti AFK ",
-        Default = true,
-        Callback = function(state)
-            autoAfkOn = state
-            if autoAfkOn then
-                enableAfk()
-            else
-                disableAfk()
-            end
-        end
-    })
-    Tabs.Main:AddParagraph({
+
+       Tabs.Main:AddParagraph({
     Title = "AFK SYSTEM",
     Content = "Afk System is running!"
 })
+
 
     -- Aba Settings (SaveManager + InterfaceManager)
     local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
