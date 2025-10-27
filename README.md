@@ -41,7 +41,7 @@ end
 -- Auto Farm NPCs
 -- =========================
 local npcRoot = Workspace:WaitForChild("__debris"):WaitForChild("__npcs"):WaitForChild("__client")
-local idFolders = {"ID_1","ID_2","ID_3","ID_4","ID_5"}
+local idFolders = {"ID_1","ID_2","ID_3","ID_4","ID_5","ID_6","ID_7","ID_8"}
 local approachOffset = Vector3.new(0, 3, 3)
 local delayBetweenTPs = 0.1
 
@@ -222,11 +222,12 @@ end
 -- Flags separadas para cada trial
 local autoTrialEasyOn = false
 local autoTrialMediumOn = false
+local autoTrialHalloweeOn = false
 
 -- Função principal para cada tipo de trial
 local function autoTrialLoop(trialType)
     task.spawn(function()
-        while (trialType == "easy" and autoTrialEasyOn) or (trialType == "medium" and autoTrialMediumOn) do
+        while (trialType == "easy" and autoTrialEasyOn) or (trialType == "medium" and autoTrialMediumOn) or (trialType == "halloween" and autoTrialHalloweenOn) do
             local timer = findTrialTimer(trialType)
             if timer then
                 local txt = normalize(timer.Text)
@@ -340,7 +341,9 @@ local orderedNames = {
     "Vessel Crystal",
     "Respiration Token",
     "Elemental Mark",
-     "Heart Gears"
+     "Heart Gears",
+     "Bankai",
+     "Hollow Rank"
 }
 local gachaMap = {
     ["Ninja Rank"] = "W1_1",
@@ -352,7 +355,9 @@ local gachaMap = {
     ["Vessel Crystal"] = "W3_3",
     ["Respiration Token"] = "W4_1",
     ["Elemental Mark"] = "W4_2",
-    ["Heart Gears"] = "W5_1"
+    ["Heart Gears"] = "W5_1",
+    ["Bankai"] = "W6_1",
+    ["Hollow Rank"] = "W6_2"
 }
 local selectedName = orderedNames[1]
 local selectedArg = gachaMap[selectedName]
@@ -540,6 +545,22 @@ else
             end
         end
     })
+     Tabs.Trial:AddToggle("AutoTrialHalloween", {
+        Title = "Auto Trial Halloween",
+        Description = "Entra automaticamente na trial Halloween",
+        Default = false,
+        Callback = function(state)
+            autoTrialHalloweenOn = state
+            if state then
+                print("🟢 Auto Trial Halloween ON")
+                trialEnteredOnce = false
+                lastTrialTrigger = 0
+                autoTrialLoop("halloween")
+            else
+                print("🔴 Auto Trial Halloween OFF")
+            end
+        end
+    })
 
     Tabs.Avatar:AddToggle("SpinAvatar", {
         Title = "Auto Spin Avatar",
@@ -608,10 +629,10 @@ else
         end
     })
 
-    -- Botão único para chamar Functions[31] com selectedPID (sem loop)
+    -- Botão único para chamar Functions[51] com selectedPID (sem loop)
     Tabs.Passives:AddButton({
-        Title = "Execute Function 31",
-        Description = "Chama Functions[31] uma vez com o PID selecionado",
+        Title = "Execute Function 51",
+        Description = "Chama Functions[51] uma vez com o PID selecionado",
         Callback = function()
             local comm = ReplicatedStorage:FindFirstChild("Communication")
             local funcs = comm and comm:FindFirstChild("Functions")
@@ -621,9 +642,9 @@ else
             end
 
             local children = funcs:GetChildren()
-            local remote = children[31]
+            local remote = children[51]
             if not remote then
-                warn(string.format("[Func31 Button] Nenhum child no índice 31 (total %d)", #children))
+                warn(string.format("[Func51 Button] Nenhum child no índice 31 (total %d)", #children))
                 return
             end
 
@@ -650,7 +671,9 @@ else
 
     -- NOVO: Dropdown + Botão Function 17 (nomes amigáveis → IDs)
     local f17Options = {
-        "Jyraua 30x Watter",
+        "Madara 50x Earth",
+        "Yami 35x Fire",
+        "Jiraya 30x Watter",
         "Etanor 25x Fire",
         "Satoru 20x Wind",
         "Esran 9x Earth",
@@ -663,7 +686,9 @@ else
         "Akanu 1.5x Fire"
     }
     local f17IdMap = {
-        ["Jyraua 30x Watter"] = "Jiraya",
+        ["Madara 50x Earth"] = "ID_11",
+        ["Yami 35x Fire"] = "Yami",
+        ["Jiraya 30x Watter"] = "Jiraya",
         ["Etanor 25x Fire"] = "ID_9",
         ["Satoru 20x Wind"] = "ID_10",
         ["Esran 9x Earth"] = "ID_8",
@@ -741,6 +766,9 @@ else
 
     -- NOVO: Dropdown + Botão Function 22 (nomes amigáveis → args duplos)
     local f22Options = {
+        "Insect 10x Wind",
+        "Serpent 10x Earth",
+        "Moon 10x Watter",
         "Sun 10x Fire",
         "Love 5x Earth",
         "Mist 5x Watter",
@@ -748,6 +776,9 @@ else
         "Fire 2x Fire",
     }
     local f22ArgsMap = {
+        ["Insect 10x Wind"]   = { "W4_1", "ID_11" },
+        ["Serpent 10x Earth"]   = { "W4_1", "ID_10" },
+        ["Moon 10x Watter"]   = { "W4_1", "ID_9" },
         ["Sun 10x Fire"]   = { "W4_1", "ID_8" },
         ["Love 5x Earth"]   = { "W4_1", "ID_7" },
         ["Mist 5x Watter"]  = { "W4_1", "ID_6" },
@@ -775,7 +806,7 @@ else
         Description = "Active change your respiration",
         Callback = function()
             local funcs = ReplicatedStorage:WaitForChild("Communication"):WaitForChild("Functions")
-            local remote = funcs:GetChildren()[22] -- índice 22
+            local remote = funcs:GetChildren()[24] -- índice 22
             if not remote then
                 warn("[Func22] Remote 404")
                 return
