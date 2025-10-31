@@ -327,7 +327,7 @@ local function safeFmt(fmt, ...)
     return string.format(fmt, unpack(args))
 end
 
-local FUNCTION_INDEX = 21
+local FUNCTION_INDEX = 23
 local AUTOCALL_DELAY = 1
 local AUTOCALL_MAX_CALLS = math.huge
 
@@ -343,7 +343,8 @@ local orderedNames = {
     "Elemental Mark",
      "Heart Gears",
      "Bankai",
-     "Hollow Rank"
+     "Hollow Rank",
+     "Black Wings"
 }
 local gachaMap = {
     ["Ninja Rank"] = "W1_1",
@@ -357,7 +358,8 @@ local gachaMap = {
     ["Elemental Mark"] = "W4_2",
     ["Heart Gears"] = "W5_1",
     ["Bankai"] = "W6_1",
-    ["Hollow Rank"] = "W6_2"
+    ["Hollow Rank"] = "W6_2",
+    ["Black Wings"] = "W7_1"
 }
 local selectedName = orderedNames[1]
 local selectedArg = gachaMap[selectedName]
@@ -671,6 +673,7 @@ else
 
     -- NOVO: Dropdown + Botão Function 17 (nomes amigáveis → IDs)
     local f17Options = {
+        "Sukuna 50x Fire",
         "Madara 50x Earth",
         "Yami 35x Fire",
         "Jiraya 30x Watter",
@@ -686,6 +689,7 @@ else
         "Akanu 1.5x Fire"
     }
     local f17IdMap = {
+        ["Sukuna 50x Fire"] = "Sukuna",
         ["Madara 50x Earth"] = "ID_11",
         ["Yami 35x Fire"] = "Yami",
         ["Jiraya 30x Watter"] = "Jiraya",
